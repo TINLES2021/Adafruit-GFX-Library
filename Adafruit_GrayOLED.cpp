@@ -70,80 +70,6 @@ Adafruit_GrayOLED::Adafruit_GrayOLED(uint8_t bpp, uint16_t w, uint16_t h,
 }
 
 /*!
-    @brief  Constructor for SPI GrayOLED displays, using software (bitbang)
-            SPI.
-    @param  bpp Bits per pixel, 1 for monochrome, 4 for 16-gray
-    @param  w
-            Display width in pixels
-    @param  h
-            Display height in pixels
-    @param  mosi_pin
-            MOSI (master out, slave in) pin (using Arduino pin numbering).
-            This transfers serial data from microcontroller to display.
-    @param  sclk_pin
-            SCLK (serial clock) pin (using Arduino pin numbering).
-            This clocks each bit from MOSI.
-    @param  dc_pin
-            Data/command pin (using Arduino pin numbering), selects whether
-            display is receiving commands (low) or data (high).
-    @param  rst_pin
-            Reset pin (using Arduino pin numbering), or -1 if not used
-            (some displays might be wired to share the microcontroller's
-            reset pin).
-    @param  cs_pin
-            Chip-select pin (using Arduino pin numbering) for sharing the
-            bus with other devices. Active low.
-    @note   Call the object's begin() function before use -- buffer
-            allocation is performed there!
-*/
-Adafruit_GrayOLED::Adafruit_GrayOLED(uint8_t bpp, uint16_t w, uint16_t h,
-                                     int8_t mosi_pin, int8_t sclk_pin,
-                                     int8_t dc_pin, int8_t rst_pin,
-                                     int8_t cs_pin)
-    : Adafruit_GFX(w, h), dcPin(dc_pin), csPin(cs_pin), rstPin(rst_pin),
-      _bpp(bpp) {
-
-  spi_dev = new Adafruit_SPIDevice(cs_pin, sclk_pin, -1, mosi_pin, 1000000);
-}
-
-/*!
-    @brief  Constructor for SPI GrayOLED displays, using native hardware SPI.
-    @param  bpp Bits per pixel, 1 for monochrome, 4 for 16-gray
-    @param  w
-            Display width in pixels
-    @param  h
-            Display height in pixels
-    @param  spi
-            Pointer to an existing SPIClass instance (e.g. &SPI, the
-            microcontroller's primary SPI bus).
-    @param  dc_pin
-            Data/command pin (using Arduino pin numbering), selects whether
-            display is receiving commands (low) or data (high).
-    @param  rst_pin
-            Reset pin (using Arduino pin numbering), or -1 if not used
-            (some displays might be wired to share the microcontroller's
-            reset pin).
-    @param  cs_pin
-            Chip-select pin (using Arduino pin numbering) for sharing the
-            bus with other devices. Active low.
-    @param  bitrate
-            SPI clock rate for transfers to this display. Default if
-            unspecified is 8000000UL (8 MHz).
-    @note   Call the object's begin() function before use -- buffer
-            allocation is performed there!
-*/
-Adafruit_GrayOLED::Adafruit_GrayOLED(uint8_t bpp, uint16_t w, uint16_t h,
-                                     SPIClass *spi, int8_t dc_pin,
-                                     int8_t rst_pin, int8_t cs_pin,
-                                     uint32_t bitrate)
-    : Adafruit_GFX(w, h), dcPin(dc_pin), csPin(cs_pin), rstPin(rst_pin),
-      _bpp(bpp) {
-
-  spi_dev = new Adafruit_SPIDevice(cs_pin, bitrate, SPI_BITORDER_MSBFIRST,
-                                   SPI_MODE0, spi);
-}
-
-/*!
     @brief  Destructor for Adafruit_GrayOLED object.
 */
 Adafruit_GrayOLED::~Adafruit_GrayOLED(void) {
@@ -151,8 +77,6 @@ Adafruit_GrayOLED::~Adafruit_GrayOLED(void) {
     free(buffer);
     buffer = NULL;
   }
-  if (spi_dev)
-    delete spi_dev;
   if (i2c_dev)
     delete i2c_dev;
 }
@@ -168,9 +92,6 @@ void Adafruit_GrayOLED::oled_command(uint8_t c) {
   if (i2c_dev) {                // I2C
     uint8_t buf[2] = {0x00, c}; // Co = 0, D/C = 0
     i2c_dev->write(buf, 2);
-  } else { // SPI (hw or soft) -- transaction started in calling function
-    digitalWrite(dcPin, LOW);
-    spi_dev->write(&c, 1);
   }
 }
 
@@ -187,11 +108,6 @@ bool Adafruit_GrayOLED::oled_commandList(const uint8_t *c, uint8_t n) {
   if (i2c_dev) {            // I2C
     uint8_t dc_byte = 0x00; // Co = 0, D/C = 0
     if (!i2c_dev->write((uint8_t *)c, n, true, &dc_byte, 1)) {
-      return false;
-    }
-  } else { // SPI -- transaction started in calling function
-    digitalWrite(dcPin, LOW);
-    if (!spi_dev->write((uint8_t *)c, n)) {
       return false;
     }
   }
@@ -246,11 +162,6 @@ bool Adafruit_GrayOLED::_init(uint8_t addr, bool reset) {
     if (!i2c_dev || !i2c_dev->begin()) {
       return false;
     }
-  } else { // Using one of the SPI modes, either soft or hardware
-    if (!spi_dev || !spi_dev->begin()) {
-      return false;
-    }
-    pinMode(dcPin, OUTPUT); // Set data/command pin as output
   }
 
   clearDisplay();

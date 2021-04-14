@@ -28,8 +28,6 @@
 
 #include <Adafruit_GFX.h>
 #include <Adafruit_I2CDevice.h>
-#include <Adafruit_SPIDevice.h>
-#include <SPI.h>
 #include <Wire.h>
 
 #define GRAYOLED_SETCONTRAST 0x81   ///< Generic contrast for almost all OLEDs
@@ -52,9 +50,6 @@ public:
   Adafruit_GrayOLED(uint8_t bpp, uint16_t w, uint16_t h, int8_t mosi_pin,
                     int8_t sclk_pin, int8_t dc_pin, int8_t rst_pin,
                     int8_t cs_pin);
-  Adafruit_GrayOLED(uint8_t bpp, uint16_t w, uint16_t h, SPIClass *spi,
-                    int8_t dc_pin, int8_t rst_pin, int8_t cs_pin,
-                    uint32_t bitrate = 8000000UL);
 
   ~Adafruit_GrayOLED(void);
 
@@ -76,7 +71,6 @@ public:
 protected:
   bool _init(uint8_t i2caddr = 0x3C, bool reset = true);
 
-  Adafruit_SPIDevice *spi_dev = NULL; ///< The SPI interface BusIO device
   Adafruit_I2CDevice *i2c_dev = NULL; ///< The I2C interface BusIO device
   int32_t i2c_preclk = 400000,        ///< Configurable 'high speed' I2C rate
       i2c_postclk = 100000;           ///< Configurable 'low speed' I2C rate
